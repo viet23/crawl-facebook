@@ -5,6 +5,8 @@ const cors = require("cors");
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args)); // ✅ FIX fetch
 require("dotenv").config();
 
+const axios = require("axios");
+
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
@@ -19,6 +21,8 @@ const ratioMap = {
 };
 
 const RUNWAY_API_KEY = process.env.RUNWAY_API_KEY;
+const SHOTSTACK_API_KEY = "PyGEoO1yaHXsTRNjBn8HsHMCp6aeG7S8agkgOsYm"; // <- Thay bằng key thật
+const SHOTSTACK_API_URL = "https://api.shotstack.io/v1/render";
 
 async function crawlFacebookPage(url) {
     const browser = await puppeteer.launch({
@@ -246,6 +250,100 @@ app.post("/generate-video", async (req, res) => {
 });
 
 
+
+app.post("/merge-videos", async (req, res) => {
+    console.log("req.body", req.body);
+    const { videos } = req.body;
+
+    if (!videos || !Array.isArray(videos) || videos.length === 0) {
+        return res.status(400).json({ error: "No video URLs provided" });
+    }
+
+    let currentStart = 0;
+    const defaultClipDuration = 5; // seconds
+
+    const clips = videos.map((url) => {
+        const clip = {
+            asset: {
+                type: "video",
+                src: url,
+            },
+            start: currentStart,
+            length: defaultClipDuration,
+            transition: {
+                in: "fade",
+                out: "fade",
+            },
+        };
+        currentStart += defaultClipDuration;
+        return clip;
+    });
+
+    const payload = {
+        timeline: {
+            background: "#000000", // phải đúng format hex
+            tracks: [
+                {
+                    clips: clips,
+                },
+            ],
+        },
+        output: {
+            format: "mp4",
+            resolution: "sd",
+            fps: 25
+        }
+    };
+
+    try {
+        const response = await axios.post("https://api.shotstack.io/v1/render", payload, {
+            headers: {
+                "x-api-key": SHOTSTACK_API_KEY,
+                "Content-Type": "application/json",
+            },
+        });
+
+        const renderId = response?.data?.response?.id;
+
+        if (renderId) {
+            return res.json({
+                success: true,
+                renderId,
+                message: "🎬 Merge started. Check status at /render-status/:id",
+            });
+        } else {
+            return res.status(500).json({ error: "Invalid Shotstack response" });
+        }
+    } catch (error) {
+        console.error("Shotstack merge error:", error?.response?.data || error.message);
+        return res.status(500).json({
+            error: "Error sending request to Shotstack",
+            detail: error?.response?.data || error.message,
+        });
+    }
+});
+
+// Optional: Check render status
+app.get("/render-status/:id", async (req, res) => {
+    const renderId = req.params.id;
+
+    try {
+        const response = await axios.get(`https://api.shotstack.io/v1/render/${renderId}`, {
+            headers: {
+                "x-api-key": SHOTSTACK_API_KEY,
+            },
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        const fullError = error?.response?.data || error.message;
+        console.error("Shotstack render status error:", JSON.stringify(fullError, null, 2));
+        return res.status(500).json({
+            error: "Error checking status",
+            detail: fullError,
+        });
+    }
+});
 
 const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => {
