@@ -159,9 +159,8 @@ app.post("/generate-image", async (req, res) => {
 });
 
 
-
 app.post("/generate-video", async (req, res) => {
-    const { promptText, promptImage } = req.body;
+    const { promptText, promptImage, duration } = req.body;
 
     if (!promptText || !promptImage) {
         return res.status(400).json({ error: "Thiếu promptText hoặc promptImage" });
@@ -171,6 +170,9 @@ app.post("/generate-video", async (req, res) => {
     if (!RUNWAY_API_KEY) {
         return res.status(500).json({ error: "Thiếu RUNWAY_API_KEY trong môi trường" });
     }
+
+    // Kiểm tra và giới hạn duration hợp lệ (ví dụ tối đa 15 giây)
+    const videoDuration = Math.min(Number(duration) || 5, 15);
 
     try {
         // Step 1: Gửi yêu cầu tạo video
@@ -186,7 +188,7 @@ app.post("/generate-video", async (req, res) => {
                 promptText,
                 promptImage,
                 ratio: "1280:720", // Hợp lệ
-                duration: 5,        // Giới hạn video 3 giây
+                duration: videoDuration, // dùng biến động
             }),
         });
 
@@ -205,10 +207,10 @@ app.post("/generate-video", async (req, res) => {
 
         // Step 2: Poll kết quả video
         let finalVideoUrl = "";
-        const timeout = Date.now() + 60_000; // 60 giây timeout
+        const timeout = Date.now() + 60_000;
 
         while (Date.now() < timeout) {
-            await new Promise((r) => setTimeout(r, 2000)); // chờ 2s trước mỗi lần kiểm tra
+            await new Promise((r) => setTimeout(r, 2000));
 
             const taskRes = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
                 method: "GET",
@@ -223,7 +225,7 @@ app.post("/generate-video", async (req, res) => {
             console.log("📡 Video polling:", taskData.status);
 
             if (taskData?.status === "SUCCEEDED") {
-                finalVideoUrl = taskData.output?.[0]; // hoặc taskData.output nếu không phải mảng
+                finalVideoUrl = taskData.output?.[0];
                 break;
             }
 
@@ -248,6 +250,7 @@ app.post("/generate-video", async (req, res) => {
         res.status(500).json({ error: "Lỗi khi tạo video từ Runway" });
     }
 });
+
 
 
 
