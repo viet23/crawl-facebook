@@ -21,7 +21,7 @@ const ratioMap = {
 };
 
 const RUNWAY_API_KEY = process.env.RUNWAY_API_KEY;
-const SHOTSTACK_API_KEY = "PyGEoO1yaHXsTRNjBn8HsHMCp6aeG7S8agkgOsYm"; // <- Thay bằng key thật
+const SHOTSTACK_API_KEY = "fHK6q16tBau8galfuCqHp7d1K98zOqnluqIZZQAQ"; // <- Thay bằng key thật
 const SHOTSTACK_API_URL = "https://api.shotstack.io/v1/render";
 
 async function crawlFacebookPage(url) {
@@ -263,7 +263,7 @@ app.post("/merge-videos", async (req, res) => {
     }
 
     let currentStart = 0;
-    const defaultClipDuration = 5; // seconds
+    const defaultClipDuration = 10; // seconds
 
     const clips = videos.map((url) => {
         const clip = {
@@ -281,6 +281,7 @@ app.post("/merge-videos", async (req, res) => {
         currentStart += defaultClipDuration;
         return clip;
     });
+    
 
     const payload = {
         timeline: {
