@@ -20,6 +20,16 @@ const ratioMap = {
     "21:9": "2520:1080",
 };
 
+const ratioMapVideo = {
+    "1:1": "960:960",
+    "16:9": "1280:720",
+    "4:3": "1104:832",
+    "3:4": "832:1104",
+    "9:16": "720:1280",
+    "21:9": "1584:672",
+};
+
+
 const RUNWAY_API_KEY = process.env.RUNWAY_API_KEY;
 const SHOTSTACK_API_KEY = "fHK6q16tBau8galfuCqHp7d1K98zOqnluqIZZQAQ"; // <- Thay bằng key thật
 const SHOTSTACK_API_URL = "https://api.shotstack.io/v1/render";
@@ -27,8 +37,8 @@ const SHOTSTACK_API_URL = "https://api.shotstack.io/v1/render";
 async function crawlFacebookPage(url) {
     const browser = await puppeteer.launch({
         headless: true,
-        executablePath: "/snap/bin/chromium", // Nếu không dùng snap, bạn có thể bỏ dòng này
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        // ❌ KHÔNG cần executablePath nếu dùng puppeteer full
     });
 
     const page = await browser.newPage();
@@ -160,7 +170,7 @@ app.post("/generate-image", async (req, res) => {
 
 
 app.post("/generate-video", async (req, res) => {
-    const { promptText, promptImage, duration } = req.body;
+    const { promptText, promptImage, duration ,ratio } = req.body;
 
     if (!promptText || !promptImage) {
         return res.status(400).json({ error: "Thiếu promptText hoặc promptImage" });
@@ -173,6 +183,7 @@ app.post("/generate-video", async (req, res) => {
 
     // Kiểm tra và giới hạn duration hợp lệ (ví dụ tối đa 15 giây)
     const videoDuration = Math.min(Number(duration) || 5, 15);
+    const mappedRatio = ratioMapVideo[ratio] || "1280:720";
 
     try {
         // Step 1: Gửi yêu cầu tạo video
@@ -187,7 +198,7 @@ app.post("/generate-video", async (req, res) => {
                 model: "gen4_turbo",
                 promptText,
                 promptImage,
-                ratio: "1280:720", // Hợp lệ
+                ratio: mappedRatio, // Hợp lệ
                 duration: videoDuration, // dùng biến động
             }),
         });
@@ -281,7 +292,7 @@ app.post("/merge-videos", async (req, res) => {
         currentStart += defaultClipDuration;
         return clip;
     });
-    
+
 
     const payload = {
         timeline: {
