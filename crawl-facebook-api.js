@@ -168,6 +168,37 @@ app.post("/generate-image", async (req, res) => {
     }
 });
 
+async function translatePromptToEnglish(promptText) {
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4",
+        messages: [
+          {
+            role: "user",
+            content: `Dịch nội dung sau sang tiếng Anh, giữ nguyên phong cách mô tả sinh động, dùng để tạo video quảng cáo sản phẩm bằng AI:\n\n"${promptText}"`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const translated = response.data.choices?.[0]?.message?.content;
+    return translated?.trim();
+  } catch (err) {
+    console.error("❌ Lỗi dịch prompt:", err.response?.data || err.message);
+    return null;
+  }
+}
+
 
 app.post("/generate-video", async (req, res) => {
     const { promptText, promptImage, duration ,ratio } = req.body;
@@ -180,6 +211,12 @@ app.post("/generate-video", async (req, res) => {
     if (!RUNWAY_API_KEY) {
         return res.status(500).json({ error: "Thiếu RUNWAY_API_KEY trong môi trường" });
     }
+
+    const translatedPrompt = await translatePromptToEnglish(promptText);
+  if (!translatedPrompt) {
+    return res.status(500).json({ error: "Không thể dịch promptText sang tiếng Anh" });
+  }
+
 
     // Kiểm tra và giới hạn duration hợp lệ (ví dụ tối đa 15 giây)
     const videoDuration = Math.min(Number(duration) || 5, 15);
