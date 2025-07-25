@@ -161,7 +161,7 @@ app.post("/generate-image", async (req, res) => {
             });
         }
 
-        res.json({ success: true, imageUrl: finalImageUrl });
+        res.json({ success: true, imageUrl: finalImageUrl  , taskId });
     } catch (err) {
         console.error("❌ Lỗi tạo ảnh:", err);
         res.status(500).json({ success: false, error: "Lỗi khi tạo ảnh từ Runway" });
@@ -292,7 +292,7 @@ app.post("/generate-video", async (req, res) => {
             });
         }
 
-        res.json({ success: true, videoUrl: finalVideoUrl });
+        res.json({ success: true, videoUrl: finalVideoUrl, taskId});
     } catch (err) {
         console.error("🚫 Lỗi tạo video:", err);
         res.status(500).json({ error: "Lỗi khi tạo video từ Runway" });
